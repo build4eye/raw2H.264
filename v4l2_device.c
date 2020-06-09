@@ -92,7 +92,6 @@ static void setMmap(struct Camera* camera) {
     if (0 != ioctl(c->fd, VIDIOC_QUERYBUF, &(c->buf))) {
       ERR_EXIT("VIDIOC_QUERYBUF");
     }
-    printf("c->buf.length = %d\n",c->buf.length);
     c->bufs[_i].length = c->buf.length;
     c->bufs[_i].start = mmap(NULL, c->buf.length, PROT_READ | PROT_WRITE,
                              MAP_SHARED, c->fd, c->buf.m.offset);
