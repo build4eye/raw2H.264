@@ -16,7 +16,7 @@ struct X264EncoderClass* NewX264EncoderClass() {
   x264_param_default(&(c->pParam));
   c->pParam.i_width = 640;
   c->pParam.i_height = 480;
-  c->pParam.i_csp = X264_CSP_I422;
+  c->pParam.i_csp = X264_CSP_YV16;
   c->pParam.i_fps_den = 1;
   c->pParam.i_fps_num = 10;
   /*
@@ -46,18 +46,6 @@ struct X264EncoderClass* NewX264EncoderClass() {
   return c;
 }
 
-// for (int index = 0; index < len;) {
-//   //printf("%d\n",index);
-//   memset(&(c->pPic_in.img.plane[0][y_i++]), ((char*)start)[index], 1);  // y
-//   index++;
-//   memset(&(c->pPic_in.img.plane[1][u_i++]), ((char*)start)[index], 1);  // U
-//   index++;
-//   memset(&(c->pPic_in.img.plane[0][y_i++]), ((char*)start)[index], 1);  // y
-//   index++;
-//   memset(&(c->pPic_in.img.plane[2][v_i++]), ((char*)start)[index], 1);  // V
-//   index++;
-// }
-
 void encode(struct X264EncoderClass* c, void* start, size_t length) {
   int ret;
   unsigned int len = length;
@@ -65,16 +53,22 @@ void encode(struct X264EncoderClass* c, void* start, size_t length) {
   unsigned int u_i = 0;
   unsigned int v_i = 0;
 
-  for (unsigned int index = 0; index < len;) {
-    memcpy(&(c->pPic_in.img.plane[0][y_i++]), start + index, 1);  // y
-    index++;
-    memcpy(&(c->pPic_in.img.plane[1][u_i++]), start + index, 1);  // U
-    index++;
-    memcpy(&(c->pPic_in.img.plane[0][y_i++]), start + index, 1);  // y
-    index++;
-    memcpy(&(c->pPic_in.img.plane[2][v_i++]), start + index, 1);  // V
-    index++;
-  }
+  // for (int index = 0; index < len;) {
+  //   // printf("%d\n",index);
+  //   memset(&(c->pPic_in.img.plane[0][y_i++]), ((char*)start)[index], 1);  // y
+  //   index++;
+  //   memset(&(c->pPic_in.img.plane[1][u_i++]), ((char*)start)[index], 1);  // U
+  //   index++;
+  //   memset(&(c->pPic_in.img.plane[0][y_i++]), ((char*)start)[index], 1);  // y
+  //   index++;
+  //   memset(&(c->pPic_in.img.plane[2][v_i++]), ((char*)start)[index], 1);  // V
+  //   index++;
+  // }
+  
+    memcpy(c->pPic_in.img.plane[0], start, len/2);// y
+    memcpy(c->pPic_in.img.plane[1], start + len/2 + len/8, len/8);// U
+    memcpy(c->pPic_in.img.plane[2], start + len/2, len/8);// V
+
 
   ret = x264_encoder_encode(c->pHandle, &(c->pNals), &(c->iNal), &(c->pPic_in),
                             &(c->pPic_out));
@@ -83,14 +77,14 @@ void encode(struct X264EncoderClass* c, void* start, size_t length) {
     printf("Error.\n");
   }
 
-//printf("Succeed encode frame: %5d\n", c->pPic_in.i_pts);
+  // printf("Succeed encode frame: %5d\n", c->pPic_in.i_pts);
 
   c->pPic_in.i_pts = c->pPic_in.i_pts + 1;
 
-  // for (int j = 0; j < c->iNal; ++j) {
-  //   fwrite(c->pNals[j].p_payload, 1, c->pNals[j].i_payload, c->fp_dst);
-  // }
-  //fflush(c->fp_dst);
+  for (int j = 0; j < c->iNal; ++j) {
+    fwrite(c->pNals[j].p_payload, 1, c->pNals[j].i_payload, c->fp_dst);
+  }
+  fflush(c->fp_dst);
 }
 
 void x264close(struct X264EncoderClass* c) {

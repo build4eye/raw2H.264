@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
   struct RawBuffer* buf = (void*)0;
   struct Camera* c = NewCamera(argv[1]);
   cameraParamInit(c);
+  
 
   printf("denominator = %d \n",
          c->Param.stream.parm.capture.timeperframe.denominator);
@@ -20,12 +21,11 @@ int main(int argc, char* argv[]) {
   int _i = 0;
   struct timeval old;
   struct timeval now;
-  while (_i < 10000) {
+  while (_i < 40) {
     _i++;
-    
+
     gettimeofday(&old, NULL);
     buf = c->PopRaw(c);
-   
 
     process_image(buf->start, c->Param.format.fmt.pix.height *
                                   c->Param.format.fmt.pix.width * 2);
@@ -34,16 +34,10 @@ int main(int argc, char* argv[]) {
 
     gettimeofday(&now, NULL);
 
-    printf("time %d\n",now.tv_sec * 1000000 - old.tv_sec * 1000000 + now.tv_usec - old.tv_usec);
-  
+    printf("time %d\n", now.tv_sec * 1000000 - old.tv_sec * 1000000 +
+                            now.tv_usec - old.tv_usec);
   }
   c->Stop(c);
-  // FILE* fp2 = fopen("./image.jpg", "wb");
-  // fwrite(buf->start,
-  //        c->Param.format.fmt.pix.height * c->Param.format.fmt.pix.width, 1,
-  //        fp2);
-  // fflush(fp2);
-  // fclose(fp2);
 
   c->Close(c);
   x264close(x);
@@ -51,8 +45,11 @@ int main(int argc, char* argv[]) {
 
 void cameraParamInit(struct Camera* c) {
   c->Param.format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;  // jpg格式
-  //c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+
+  //c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;  // jpg格式
+  //c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV422P;
+  //c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV422M;
+  c->Param.format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
   c->Param.format.fmt.pix.height = 1080;
   c->Param.format.fmt.pix.width = 1920;
   // c->Param.format.fmt.pix.field = V4L2_FIELD_NONE;
@@ -70,11 +67,11 @@ void cameraParamInit(struct Camera* c) {
 }
 
 void process_image(void* start, size_t length) {
-  // int fd = open("./video.yuv", O_RDWR | O_CREAT | O_APPEND, 0777);
+  // int fd = open("/dev/shm/video.yuv", O_RDWR | O_CREAT | O_APPEND, 0777);
   // write(fd, (char*)start, length);
   // close(fd);
- // encode(x, start, length);
-  int fd = open("./video.mjpeg", O_RDWR | O_CREAT | O_APPEND, 0777);
-  write(fd, (char*)start, length);
-  close(fd);
+  encode(x, start, length);
+  // int fd = open("/dev/shm/video.mjpeg", O_RDWR | O_CREAT | O_APPEND, 0777);
+  // write(fd, (char*)start, length);
+  // close(fd);
 }
