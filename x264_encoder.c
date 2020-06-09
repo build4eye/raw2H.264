@@ -1,24 +1,29 @@
 #include "x264_encoder.h"
 
-struct X264EncoderClass* NewX264EncoderClass() {
-  X264EncoderClass_P c =
-      (X264EncoderClass_P)(malloc(sizeof(struct X264EncoderClass)));
-  if (c == 0) return (void*)0;
-  memset(c, 0, sizeof(struct X264EncoderClass));
+#include "config.h"
 
-  c->fp_dst = fopen("/dev/shm/cuc_ieschool.h264", "wb");
+// NewX264Encoder 新建一个h264编码器
+struct X264Encoder* NewX264Encoder() {
+  X264Encoder_P x = (X264Encoder_P)(malloc(sizeof(struct X264Encoder)));
+  if (x == 0) return (void*)0;
+  memset(x, 0, sizeof(struct X264Encoder));
 
-  c->iNal = 0;
-  c->pNals = NULL;
-  c->pHandle = NULL;
-  c->pPic_in.i_pts = 0;
+  // TODO:
+  x->fp_dst = fopen("/dev/shm/video.h264", "wb");
 
-  x264_param_default(&(c->pParam));
-  c->pParam.i_width = 640;
-  c->pParam.i_height = 480;
-  c->pParam.i_csp = X264_CSP_YV16;
-  c->pParam.i_fps_den = 1;
-  c->pParam.i_fps_num = 10;
+  x->iNal = 0;
+  x->pNals = NULL;
+  x->pHandle = NULL;
+  x->pPic_in.i_pts = 0;
+
+  x264_param_default(&(x->pParam));
+  x->pParam.i_width = WIDTH;
+  x->pParam.i_height = HEIGHT;
+#if YUYV
+  x->pParam.i_csp = X264_CSP_I422;
+#endif
+  x->pParam.i_fps_den = 1;
+  x->pParam.i_fps_num = FPS;
   /*
           //Param
           pParam->i_log_level  = X264_LOG_DEBUG;
@@ -37,60 +42,50 @@ struct X264EncoderClass* NewX264EncoderClass() {
           pParam->i_timebase_den = pParam->i_fps_num;
           pParam->i_timebase_num = pParam->i_fps_den;
   */
-  x264_param_apply_profile(&(c->pParam), x264_profile_names[5]);
-  c->pHandle = x264_encoder_open(&(c->pParam));
+  x264_param_apply_profile(&(x->pParam), x264_profile_names[5]);
+  x->pHandle = x264_encoder_open(&(x->pParam));
 
-  x264_picture_init(&(c->pPic_out));
-  x264_picture_alloc(&(c->pPic_in), c->pParam.i_csp, c->pParam.i_width,
-                     c->pParam.i_height);
-  return c;
+  x264_picture_init(&(x->pPic_out));
+  x264_picture_alloc(&(x->pPic_in), x->pParam.i_csp, x->pParam.i_width,
+                     x->pParam.i_height);
+  return x;
 }
 
-void encode(struct X264EncoderClass* c, void* start, size_t length) {
+void x264encode(struct X264Encoder* x, void* start, size_t length) {
   int ret;
   unsigned int len = length;
   unsigned int y_i = 0;
   unsigned int u_i = 0;
   unsigned int v_i = 0;
+  char * buf = start;
 
-  // for (int index = 0; index < len;) {
-  //   // printf("%d\n",index);
-  //   memset(&(c->pPic_in.img.plane[0][y_i++]), ((char*)start)[index], 1);  // y
-  //   index++;
-  //   memset(&(c->pPic_in.img.plane[1][u_i++]), ((char*)start)[index], 1);  // U
-  //   index++;
-  //   memset(&(c->pPic_in.img.plane[0][y_i++]), ((char*)start)[index], 1);  // y
-  //   index++;
-  //   memset(&(c->pPic_in.img.plane[2][v_i++]), ((char*)start)[index], 1);  // V
-  //   index++;
-  // }
-  
-    memcpy(c->pPic_in.img.plane[0], start, len/2);// y
-    memcpy(c->pPic_in.img.plane[1], start + len/2 + len/8, len/8);// U
-    memcpy(c->pPic_in.img.plane[2], start + len/2, len/8);// V
+#if YUYV
+  for (int _i = 0; _i < len;_i = _i + 4) {
+    x->pPic_in.img.plane[0][y_i++] = *(buf++);
+    x->pPic_in.img.plane[1][u_i++] = *(buf++);
+    x->pPic_in.img.plane[0][y_i++] = *(buf++);
+    x->pPic_in.img.plane[2][v_i++] = *(buf++);
+  }
+#endif
 
-
-  ret = x264_encoder_encode(c->pHandle, &(c->pNals), &(c->iNal), &(c->pPic_in),
-                            &(c->pPic_out));
+  ret = x264_encoder_encode(x->pHandle, &(x->pNals), &(x->iNal), &(x->pPic_in),
+                            &(x->pPic_out));
 
   if (ret < 0) {
     printf("Error.\n");
   }
+  x->pPic_in.i_pts = x->pPic_in.i_pts + 1;
 
-  // printf("Succeed encode frame: %5d\n", c->pPic_in.i_pts);
-
-  c->pPic_in.i_pts = c->pPic_in.i_pts + 1;
-
-  for (int j = 0; j < c->iNal; ++j) {
-    fwrite(c->pNals[j].p_payload, 1, c->pNals[j].i_payload, c->fp_dst);
+  for (int j = 0; j < x->iNal; ++j) {
+    fwrite(x->pNals[j].p_payload, 1, x->pNals[j].i_payload, x->fp_dst);
   }
-  fflush(c->fp_dst);
+  fflush(x->fp_dst);
 }
 
-void x264close(struct X264EncoderClass* c) {
-  x264_picture_clean(&(c->pPic_in));
-  x264_encoder_close(c->pHandle);
-  c->pHandle = NULL;
+void x264close(struct X264Encoder* x) {
+  x264_picture_clean(&(x->pPic_in));
+  x264_encoder_close(x->pHandle);
+  x->pHandle = NULL;
 
-  fclose(c->fp_dst);
+  fclose(x->fp_dst);
 }

@@ -2,6 +2,7 @@
   "files.associations": {
     "x264_encoder.h": "c",
     "stdint.h": "c",
-    "x264_config.h": "c"
+    "x264_config.h": "c",
+    "config.h": "c"
   }
 }

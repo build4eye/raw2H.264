@@ -18,7 +18,7 @@ void cameraParamInit(struct Camera* c) {
   //设置流相关，帧率
   c->Param.stream.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   // TOTO:denominator
-  c->Param.stream.parm.capture.timeperframe.denominator = 30;
+  c->Param.stream.parm.capture.timeperframe.denominator = FPS;
   c->Param.stream.parm.capture.timeperframe.numerator = 1;
 
   c->Param.reqbuf.count = 5;
@@ -63,7 +63,8 @@ int main(int argc, char* argv[]) {
 
   // TODO:创建一个mjpeg转rgb 的转码器
 
-  // TODO:创建一个h264编码器
+  // TODO:创建一个h264编码器,暂时支持ｘ264
+  X264Encoder_P x264 = NewX264Encoder();
 
   // TODO:v4l2驱动开始采集
   camera->Start(camera);
@@ -82,11 +83,16 @@ int main(int argc, char* argv[]) {
     // TODO:mjpeg转rgb
 
     // TODO:h264编码
+    x264encode(x264, buf->start,
+               camera->Param.format.fmt.pix.height *
+                   camera->Param.format.fmt.pix.width * 2);
 
     // TODO:RTSP推流
 
     camera->PushRaw(camera, buf);
   }
+
+  x264close(x264);
 
   camera->Stop(camera);
 

@@ -9,7 +9,7 @@
 #include "x264.h"
 #include "x264_config.h"
 
-struct X264EncoderClass {
+struct X264Encoder {
   FILE* fp_dst;
 
   int iNal;
@@ -19,11 +19,12 @@ struct X264EncoderClass {
   x264_picture_t pPic_out;
   x264_param_t pParam;
 };
-typedef struct X264EncoderClass* X264EncoderClass_P;
 
-struct X264EncoderClass* NewX264EncoderClass();
+typedef struct X264Encoder* X264Encoder_P;
 
-void x264close(struct X264EncoderClass* c);
-void encode(struct X264EncoderClass* c, void* start, size_t length) ;
+struct X264Encoder* NewX264Encoder();
+
+void x264close(struct X264Encoder* x);
+void x264encode(struct X264Encoder* x, void* start, size_t length) ;
 
 #endif
