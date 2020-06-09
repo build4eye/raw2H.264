@@ -76,6 +76,7 @@ void x264encode(struct X264Encoder* x, void* start, size_t length) {
   }
   x->pPic_in.i_pts = x->pPic_in.i_pts + 1;
 
+
   for (int j = 0; j < x->iNal; ++j) {
     fwrite(x->pNals[j].p_payload, 1, x->pNals[j].i_payload, x->fp_dst);
   }
